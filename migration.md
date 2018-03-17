@@ -1,17 +1,19 @@
-# Zendesk Migration Documentation
+# Zendesk Migration
 <sup>For non Zendesk to Zendesk migrations</sup>
 
 ### Starter Questions:
 1. What system will the client be migrating from?
-2. What sort of items do the client wish to migrate? (groups, organizations, users, tickets, ticket comments, attachments, articles, ticket fields, user fields…)
+2. What sort of items do the client wish to migrate? ([groups](#groups), [organizations](#organizations), [users](#users), [tickets](#tickets), [ticket comments](#ticket-comments), attachments, articles, [ticket fields](#ticket-fields), [user fields](#user-fields)…)
 3. What type of data is available?
 Does the legacy system have any sort of API for accessing all necessary records?
 If easier, can the client export the legacy data to .csv or similar format?
+4. Will the client need attachments to be migrated? If so, how can we export each attachment?
+5. How will the data be mapped? [See below](#data-mapping)
 
-### Zendesk Migration Breakdown:
-We start with the end result of importing a single ticket into Zendesk, then work backwards to import any data which any imported ticket may depend on. For example, a Zendesk ticket requires a requester, which is the user who created the ticket. So naturally, we must import that user before we import that ticket. However, a user may belong to an organization. In that case we must import that user’s organization before we import the user. Even further, and organization can belong to a group. So we must import that group, then the organization, then the user, then finally the ticket. This is just a small, simple example of the migration process. There are many other dependencies involved in a migration. But in general, the basic process starts with importing the necessary groups first, followed by organizations, then users, group memberships, organization memberships, then finally ticket comments / attachments.
+### Zendesk Migration Breakdown
+We start with the end result of importing a single [ticket](#tickets) into Zendesk, then work backwards to import any data which any imported [ticket](#tickets) may depend on. For example, a Zendesk [ticket](#tickets) requires a requester, which is the [user](#users) who created the [ticket](#tickets). So naturally, we must import that [user](#users) before we import that [ticket](#tickets). However, a [user](#users) may belong to an [organization](#organizations). In that case we must import that [user's](#users) [organization](#organizations) before we import the [user](#users). Even further, and [organization](#organizations) can belong to a [group](#goups). So we must import that [group](#goups), then the [organization](#organizations), then the [user](#users), then finally the [ticket](#tickets). This is just a small, simple example of the migration process. There are many other dependencies involved in a migration. But in general, the basic process starts with importing the necessary [groups](#goups) first, followed by [organizations](#organizations), then [users](#users), [group memberships](#group-memberships), [organization memberships](#organization-memberships), then finally [ticket comments](#ticket-comments).
 
-### Data Mapping:
+### Data Mapping
 Data mapping can be the trickiest part a a migration. The better understanding the client has of how Zendesk data is linked together, the easier mapping the data from their legacy system will be. Here is a basic breakdown of Zendesk items with their fields, starting from the top level down:
 
 <sup>**Fields marked with * are required**</sup>
@@ -47,10 +49,32 @@ Data mapping can be the trickiest part a a migration. The better understanding t
 |tags|comma separated list|The array of tags applied to this ticket|
 |created_at|text|When this record was created. Example: "2018-03-17T06:59:22+00:00"|
 
+### Ticket Fields
+|Field Name|Type|Description|
+|:---|:---:|:---|
+|**type***|text|The type of the ticket field: "checkbox", "date", "decimal", "integer", "regexp", "tagger", "text", or "textarea". Type is not editable once created.|
+|**title***|text|The title of the ticket field|
+|raw_title|text|The dynamic content placeholder, if present, or the "title" value, if not. See Dynamic Content|
+|description|text|The description of the purpose of this ticket field, shown to users|
+|raw_description|text|The dynamic content placeholder, if present, or the "description" value, if not. See Dynamic Content|
+|position|integer|A relative position for the ticket fields that determines the order of ticket fields on a ticket. Note that positions 0 to 7 are reserved for system fields|
+|active|yes or no|Whether this field is available|
+|required|yes or no|If it's required for this field to have a value when updated by agents|
+|collapsed_for_agents|yes or no|If this field should be shown to agents by default or be hidden alongside infrequently used fields. Classic interface only|
+|regexp_for_validation|text|Regular expression field only. The validation pattern for a field value to be deemed valid.|
+|title_in_portal|text|The title of the ticket field when shown to end users|
+|raw_title_in_portal|text|The dynamic content placeholder, if present, or the "title_in_portal" value, if not. See Dynamic Content|
+|visible_in_portal|yes or no|Whether this field is available to end users|
+|editable_in_portal|yes or no|Whether this field is editable by end users|
+|required_in_portal|yes or no|If it's required for this field to have a value when updated by end users|
+|tag|text|A tag value to set for checkbox fields when checked|
+|**custom_field_options***|comma separated list|A list of field values. ***Required only for a ticket field of type "tagger"**|
+|sub_type_id|integer|"priority" and "status" fields only, inaccessible to all other field types. Defaults to 0. A "priority" sub type of 1 removes the "Low" and "Urgent" options. A "status" sub type of 1 adds the "On-Hold" option.|
+
 ### Users
 |Field Name|Type|Description|
 |:---|:---:|:---|
-|email|text|The user's primary email address. Writeable on create only. On update, a secondary email is added|
+|**email***|text|The user's primary email address. Writeable on create only. On update, a secondary email is added|
 |**name***|text|The users name|
 |alias|text|An alias displayed to end users|
 |custom_role|text|A custom role if the user is an agent on the Enterprise plan|
@@ -70,6 +94,22 @@ Data mapping can be the trickiest part a a migration. The better understanding t
 |ticket_restriction|text|Specifies which tickets the user has access to. Possible values are: "organization", "groups", "assigned", "requested", null|
 |time_zone|text|The user's time zone. Example: “Pacific Time (US & Canada)”|
 |verified|yes or no|The user's primary identity is verified or not|
+
+### User Fields
+|Field Name|Type|Description|
+|:---|:---:|:---|
+|**key***|string|create	A unique key that identifies this custom field. This is used for updating the field and referencing in placeholders.|
+|**type***|string|Type of the custom field: "checkbox", "date", "decimal", "dropdown", "integer", "regexp", "text", or "textarea"|
+|**title***|string|The title of the custom field|
+|raw_title|string|The dynamic content placeholder, if present, or the "title" value, if not. See Dynamic Content|
+|description|string|User-defined description of this field's purpose|
+|raw_description|string|The dynamic content placeholder, if present, or the "description" value, if not. See Dynamic Content|
+|position|integer|Ordering of the field relative to other fields|
+|active|yes or no|If yes, this field is available for use|
+|system|yes or no|If yes, only active and position values of this field can be changed|
+|regexp_for_validation|string|Regular expression field only. The validation pattern for a field value to be deemed valid.|
+|tag|string|Optional for custom field of type "checkbox"; not presented otherwise.|
+|**custom_field_options***|comma separated list|***Required only for a custom field of type "dropdown"**|
 
 ### Organizations
 |Field Name|Type|Description|
@@ -91,7 +131,7 @@ Data mapping can be the trickiest part a a migration. The better understanding t
 |[**organization***](#organizations)|name of [organization](#organizations)|The organization for this membership|
 |default|yes or no|Denotes whether this is the default organization membership for the user
 
-### Groups (has no dependencies)
+### Groups
 |Field Name|Type|Description|
 |:---|:---:|:---|
 |**name***|text|The name of the group. Can have multiple groups with the same name|
